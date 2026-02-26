@@ -1,0 +1,294 @@
+#ifndef PREPROCESSOR_HPP
+#define PREPROCESSOR_HPP
+// #pragma once
+
+#include <cstddef>
+#include <cstdlib>
+#include <filesystem>
+#include <fmt/base.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+namespace prp::fs {
+
+inline std::filesystem::path expandHome(const std::filesystem::path &path) {
+  std::string str = path.string();
+  const char *homeEnv = std::getenv("HOME");
+  if (!homeEnv)
+    return path; // fallback
+  const std::string HOME{homeEnv};
+  if (str.rfind("~/", 0) == 0)
+    str.replace(0, 1, HOME);
+  if (str.rfind("$HOME/", 0) == 0)
+    str.replace(0, 5, HOME);
+  if (str.rfind("%HOME/", 0) == 0)
+    str.replace(0, 5, HOME);
+  return std::filesystem::path(str);
+}
+
+inline std::filesystem::path resolvePath(const std::filesystem::path &base,
+                                         const std::filesystem::path &rel) {
+  std::filesystem::path b = expandHome(base).lexically_normal();
+  std::filesystem::path r = expandHome(rel).lexically_normal();
+  if (r.is_absolute())
+    return r;
+  return (b.parent_path() / r).lexically_normal();
+}
+
+inline std::string readFile(const std::filesystem::path &path) {
+  std::ifstream file(path, std::ios::binary);
+  if (!file.is_open()) {
+    fmt::println(stderr, "Unable to open file: {}", path.string());
+    return {};
+  }
+  std::ostringstream ss;
+  ss << file.rdbuf();
+  return ss.str();
+}
+
+} // namespace prp::fs
+
+namespace prp {
+
+enum class OutputMode {
+  NoOutput,
+  WriteToFile,
+  ReturnString,
+  PrintToStdout,
+  OverwriteInput,
+  PrintToStdoutLn,
+};
+
+class Processor {
+private:
+  std::filesystem::path filepath;
+  std::unordered_set<std::filesystem::path> includeHistory; // detect recursion
+
+  struct SkipBlock {
+    std::string beginTag;
+    std::string endTag;
+    size_t lineNumber;
+  };
+
+  static const std::vector<std::pair<std::string, std::string>> &skipTags() {
+    static const std::vector<std::pair<std::string, std::string>> tags{
+        {"//=[pragma::skip.beg]=//", "//=[pragma::skip.end]=//"},
+        {"//={pragma::skip.beg}=//", "//={pragma::skip.end}=//"},
+        {"#[pragma::skip.beg]#", "#[pragma::skip.end]#"},
+        {"#{pragma::skip.beg}#", "#{pragma::skip.end}#"}};
+    return tags;
+  }
+
+  static const std::vector<std::string> &skipLineTags() {
+    static const std::vector<std::string> tags{
+        "//=[pragma::skip]=//", "//={pragma::skip}=//", "#{pragma::skip}#",
+        "#[pragma::skip]#"};
+    return tags;
+  }
+
+  static const std::vector<std::string> &includeTags() {
+    static const std::vector<std::string> tags{
+        "#{pragma::include:\"",
+        "#{pragma::include|\"",
+        "//={pragma::include:\"",
+        "//={pragma::include|\"",
+        "// #{pragma::include:\"",
+        "// #{pragma::include|\"",
+    };
+    return tags;
+  }
+
+  std::string processString(const std::string &input,
+                            const std::filesystem::path &currentFile) {
+    std::istringstream stream(input);
+    std::ostringstream output;
+    std::string line;
+    size_t lineNum = 0;
+
+    std::stack<SkipBlock> skipStack;
+
+    while (std::getline(stream, line)) {
+      ++lineNum;
+
+      // 1. End skip block first
+      if (!skipStack.empty()) {
+        if (line.find(skipStack.top().endTag) != std::string::npos) {
+          skipStack.pop();
+          continue; // skip end line
+        } else {
+          continue; // skip inner line
+        }
+      }
+
+      // 2. Begin skip block
+      bool skipLine = false;
+      for (auto &[begin, end] : skipTags()) {
+        if (line.find(begin) != std::string::npos) {
+          skipStack.push({begin, end, lineNum});
+          skipLine = true;
+          break;
+        }
+      }
+      if (skipLine)
+        continue;
+
+      // 3. Single-line skip
+      for (auto &tag : skipLineTags()) {
+        if (line.find(tag) != std::string::npos) {
+          skipLine = true;
+          break;
+        }
+      }
+      if (skipLine)
+        continue;
+
+      // 4. Include pragmas
+      std::string trimmed = line;
+      trimmed.erase(0, trimmed.find_first_not_of(" \t"));
+      bool included = false;
+
+      for (auto &tag : includeTags()) {
+        if (trimmed.rfind(tag, 0) == 0) {
+          size_t start = tag.size();
+          size_t end = trimmed.find("\"", start);
+          if (end == std::string::npos) {
+            fmt::println(stderr, "Malformed include at line {}", lineNum);
+            included = true;
+            break;
+          }
+
+          std::string includePath = trimmed.substr(start, end - start);
+
+          // Optional message
+          std::string message;
+          size_t msgPos = trimmed.find("msg:\"", end);
+          if (msgPos != std::string::npos) {
+            size_t msgStart = msgPos + 5; // skip 'msg:"'
+            size_t msgEnd = trimmed.find("\"", msgStart);
+            if (msgEnd != std::string::npos) {
+              message = trimmed.substr(msgStart, msgEnd - msgStart);
+            }
+          }
+
+          std::filesystem::path fullPath =
+              fs::resolvePath(currentFile, includePath);
+
+          if (fullPath.empty() || includeHistory.contains(fullPath.string())) {
+            fmt::println(stderr, "Recursive or missing include: {}",
+                         fullPath.string());
+            included = true;
+            break;
+          }
+
+          if (!message.empty())
+            fmt::println("Including {} — {}", fullPath.string(), message);
+
+          includeHistory.insert(fullPath.string());
+          std::string content = fs::readFile(fullPath);
+          if (!content.empty())
+            output << processString(content, fullPath);
+          includeHistory.erase(fullPath.string());
+
+          included = true;
+          break;
+        }
+      }
+
+      if (included)
+        continue;
+
+      // 5. Normal line
+      output << line << "\n";
+    }
+
+    if (!skipStack.empty())
+      fmt::println(stderr, "Warning: unclosed skip block starting at line {}",
+                   skipStack.top().lineNumber);
+
+    return output.str();
+  }
+
+public:
+  Processor(std::filesystem::path path) : filepath(std::move(path)) {}
+
+  std::string process(OutputMode mode = OutputMode::ReturnString,
+                      const std::filesystem::path &outputFile = "") {
+    std::string content = fs::readFile(filepath);
+    if (content.empty())
+      return {};
+
+    std::string processed = processString(content, filepath);
+
+    switch (mode) {
+    case OutputMode::ReturnString: {
+      return processed;
+    }
+    case OutputMode::PrintToStdout: {
+      fmt::println("{}", processed);
+      break;
+    }
+    case OutputMode::PrintToStdoutLn: {
+      std::stringstream Processed(processed, std::ios::in | std::ios::binary);
+      auto width{[&](int n) {
+        if (n == 0)
+          return 1;
+        return static_cast<int>(std::log10(n)) + 1;
+      }};
+      std::string line{};
+      size_t ln{1};
+      for (; std::getline(Processed, line); ++ln)
+        ;
+      Processed.clear();
+      Processed.seekg(0);
+      for (auto Ln{1}; std::getline(Processed, line); ++Ln) {
+        fmt::println("{:>{}} | {}", Ln, width(ln), line);
+      }
+    }
+    case OutputMode::WriteToFile: {
+      if (outputFile.empty()) {
+        fmt::println(stderr, "Output file path is empty. Cannot write.");
+      } else {
+        std::ofstream out(outputFile, std::ios::binary);
+        if (!out.is_open()) {
+          fmt::println(stderr, "Failed to open output file: {}",
+                       outputFile.string());
+        } else {
+          out << processed;
+        }
+      }
+      break;
+    }
+
+    case OutputMode::OverwriteInput: {
+      {
+        std::ofstream out(filepath, std::ios::binary);
+        if (!out.is_open()) {
+          fmt::println(stderr, "Failed to overwrite input file: {}",
+                       filepath.string());
+        } else {
+          out << processed;
+        }
+      }
+      break;
+    }
+
+    case OutputMode::NoOutput: {
+      // do nothing
+      break;
+    }
+    }
+
+    return {};
+  }
+};
+
+} // namespace prp
+
+#endif // PREPROCESSOR_HPP

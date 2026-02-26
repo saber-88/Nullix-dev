@@ -6,11 +6,10 @@
     #include <string>
     #include <expected>
     #include <filesystem>
-    #include <source_location>
     
     #define ONLY_FORWARD_SYMBOL_DECLS_UNIQX_
     #
-    #   include "uniqx.hpp"
+    #   include "uniqx/uniqx.hpp"
     #
     #undef ONLY_FORWARD_SYMBOL_DECLS_UNIQX_
     

@@ -1,27 +1,32 @@
 #include <array>
-#include <cstdlib>
 #include <print>
+#include <cstdlib>
 
-#include "sys_proc/UniqxPipe.hpp"
+#include "SubProcess.hpp"
+#include "sub_process/UniqxPd.hpp"
+#include "sub_process/UniqxPipe.hpp"
 
-namespace
-    uniqx
+namespace [[
+        /* nullAttr_ */
+    ]] uniqx
 {
     
-    auto SysProc::
+    using namespace system::process;
+    
+    auto SubProcess::
         UniqxPipe::create
         ( void /* v_ */ )
     -> UniqxPipe
     {
         
-        constexpr int K_i_pipeDes_RX { +0L };
-        constexpr int K_i_pipeDes_TX { +1L };
-        constexpr int K_i_pipeDesLim { +2L };
+        constexpr int K_i_pipeDes_RX { +0 };
+        constexpr int K_i_pipeDes_TX { +1 };
+        constexpr int K_i_pipeDesLim { +2 };
         
         std::array<int , K_i_pipeDesLim> _i_arr_pipeDes { };
         
         if
-            ( ::pipe ( _i_arr_pipeDes.data ( ) ) == -1L )
+            ( ::pipe ( _i_arr_pipeDes.data ( ) ) == -1 )
         {
             std::println ( stderr , "[Err]: Unable to create pipe" );
             std::exit ( errno );

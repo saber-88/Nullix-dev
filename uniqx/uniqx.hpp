@@ -33,15 +33,29 @@
         * * It handles the mapping of standard folders (config, cache, local)
         * * & the dotfile source repository (optional).
         !*********************************************************************/
-        class FileTree;
         
-        class SysProc;
+        namespace [[
+                /* nullAttr_ */
+            ]] system
+        {
+            
+            class FileTree;
+            
+            namespace [[
+                    /* nullAttr_ */
+                ]] process
+            {
+                class SubProcess;
+                struct ProcResult;
+            }
+            
+        } /* namespace system */
         
     } /* namespace uniqx */
     
     /*************************************************************************!
-    @details: Prevents circular dependencies.
-    * define this macro to get only forward declared symbols of uniqx ,
+    @brief: Prevents circular dependencies.
+    @details: define this macro to get only forward declared symbols of uniqx ,
     * then undef to allow the ifndef condition to be true &
     * rid ourselves of circular dependencies.
     !*************************************************************************!
@@ -55,11 +69,14 @@
     * ```
     !*************************************************************************/
     #if !defined(ONLY_FORWARD_SYMBOL_DECLS_UNIQX_)
-    #   include "sys_proc/SysProc.hpp"
-    #   include "sys_proc/UniqxPd.hpp"
-    #   include "sys_proc/UniqxPipe.hpp"
-    #   include "file_tree/FileTree.hpp"
-    #   include "file_tree/PathProxy.hpp"
+    # /* IWYU pragma: begin_exports */
+    #   include "system/file_tree/FileTree.hpp"
+    #   include "system/file_tree/PathProxy.hpp"
+    #   include "process/sub_process/UniqxPd.hpp"
+    #   include "process/sub_process/UniqxPipe.hpp"
+    #   include "process/sub_process/ProcResult.hpp"
+    #   include "process/sub_process/SubProcess.hpp"
+    # /* IWYU pragma: end_exports */
     #endif /* ONLY_FORWARD_SYMBOL_DECLS_UNIQX_ */
     
 #endif /* UNIQX_HPP_ */

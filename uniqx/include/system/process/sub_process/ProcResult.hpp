@@ -11,8 +11,6 @@
     #
     #undef ONLY_FORWARD_SYMBOL_DECLS_UNIQX_
     
-    #include "sys_proc/SysProc.hpp"
-    
     namespace [[
             /* nullAttr_ */
         ]] uniqx
@@ -20,13 +18,13 @@
         
         struct [[
             /* nullAttr_ */
-        ]] SysProc::Result
+        ]] system::process::ProcResult
             {
-                int _status { };
+                long _status { };
                 std::string _stdout { };
                 std::string _stderr { };
                 
-                private: friend class SysProc;
+                // private: friend class SysProc;
                 
                 public: auto exited
                     ( void /* v_ */ ) const
@@ -64,24 +62,25 @@
                     ( void /* v_ */ ) const
                 -> int;
                 
-                public: auto stdout
+                public: auto stdOut
                     ( void /* v_ */ ) const
-                -> const std::string&;
+                -> std::string;
                 
-                public: auto stderr
+                public: auto stdErr
                     ( void /* v_ */ ) const
-                -> const std::string&;
+                -> std::string;
                 
                 public: auto success
                     ( void /* v_ */ ) const
                 -> bool;
                 
-                public: template<std::predicate<const Result&> Rule>
+                public: template<std::predicate<const ProcResult&> Rule>
                     auto success
                     ( Rule&& /* p_rule_ */ ) const
                 -> bool;
                 
                 operator int ( void /* v_ */ ) const;
+                operator bool ( void /* v_ */ ) const;
                 operator long ( void /* v_ */ ) const;
             }
         ;
