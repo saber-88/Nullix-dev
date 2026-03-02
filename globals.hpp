@@ -6,7 +6,6 @@
     #include <unistd.h>
     #include <filesystem> /* IWYU pragma: export */
     #include <source_location>
-    #include <bits/posix1_lim.h>
     
     #include "diagnostics/Diagnostics.hpp"
     
@@ -79,9 +78,11 @@
         -> std::optional <std::string>
         {
             
+            #define HOSTNAME_MAX 1<<8
+            
             if
                 (
-                    std::array <char , HOST_NAME_MAX + 1L> hostNm_ { };
+                    std::array <char , ( HOSTNAME_MAX ) + 1L> hostNm_ { };
                     ::gethostname ( hostNm_.data ( ) , hostNm_.size ( ) ) == 0L
                 ) [[likely]]
             {

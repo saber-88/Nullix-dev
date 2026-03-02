@@ -125,7 +125,7 @@
                 {
                     std::clamp
                     (
-                        ( k_i64_brightness + k_i64_delta_ ) , 0L ,
+                        ( k_i64_brightness + k_i64_delta_ ) , +0L ,
                         k_i64_maxBrightess
                     )
                 }
@@ -156,7 +156,7 @@
             
             // convert the raw k_i64_brightness to percent %
             // constexpr double cxp_percent { 100.0 };
-            constexpr double K_percent { 100.0 };
+            constexpr double K_percent { +100.0 };
             const double
                 k_d_brightnessPercent
                 {
@@ -176,7 +176,7 @@
             
             _d_deltaBrightnessPrecent =
                 std::clamp
-                ( _d_deltaBrightnessPrecent , 0.0 , 100.0 )
+                ( _d_deltaBrightnessPrecent , +0.0 , +100.0 )
             ;
             
             const int64_t
@@ -186,7 +186,7 @@
                     static_cast <int64_t>
                     (
                         _d_deltaBrightnessPrecent *
-                        k_i64_maxBrightness / 100.0 + 0.5
+                        k_i64_maxBrightness / +100.0 + +0.5
                     )
                     
                 }

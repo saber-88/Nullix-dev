@@ -11,6 +11,7 @@
 #include "host/host.hpp"
 #include "diagnostics/error.hpp"
 #include "diagnostics/Diagnostics.hpp"
+#include "system/file_tree/FileTree.hpp"
 
 
 namespace
@@ -197,7 +198,7 @@ namespace
                 
             } ( )
         )
-        , dirs ( uniqx::FileTree ( this->mt_fsp_userHome ( ) ) )
+        , dirs ( uniqx::system::FileTree ( this->mt_fsp_userHome ( ) ) )
     { }
     
     CLASS_CTOR

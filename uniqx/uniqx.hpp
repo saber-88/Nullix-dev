@@ -45,8 +45,15 @@
                     /* nullAttr_ */
                 ]] process
             {
-                class SubProcess;
-                struct ProcResult;
+                
+                struct [[ /* Process Config */ ]] ProcRules;
+                struct [[ /* Process DataIO */ ]] ProcStream;
+                class [[ /* Process Manager */ ]] SubProcess;
+                class [[ /* SubProcess Piper */ ]] SubProcPipe;
+                class [[ /* Pipe Descriptor Handler */ ]] ProcPd;
+                struct [[ /* Pipe Descriptor Spawner */ ]] ProcPipe;
+                struct [[ /* Process's Result Storage */ ]] ProcResult;
+                
             }
             
         } /* namespace system */
@@ -55,9 +62,9 @@
     
     /*************************************************************************!
     @brief: Prevents circular dependencies.
-    @details: define this macro to get only forward declared symbols of uniqx ,
-    * then undef to allow the ifndef condition to be true &
-    * rid ourselves of circular dependencies.
+    @details: #define the macro to get only forward declared symbols of uniqx ,
+    * then #undef to allow the #ifndef condition to be true rid ourselves of
+    * circular dependencies.
     !*************************************************************************!
     * Usage Example:
     * ```cpp
@@ -70,12 +77,12 @@
     !*************************************************************************/
     #if !defined(ONLY_FORWARD_SYMBOL_DECLS_UNIQX_)
     # /* IWYU pragma: begin_exports */
+    #   include "system/process/ProcPd.hpp"
+    #   include "system/process/ProcPipe.hpp"
+    #   include "system/process/ProcResult.hpp"
+    #   include "system/process/SubProcess.hpp"
     #   include "system/file_tree/FileTree.hpp"
     #   include "system/file_tree/PathProxy.hpp"
-    #   include "process/sub_process/UniqxPd.hpp"
-    #   include "process/sub_process/UniqxPipe.hpp"
-    #   include "process/sub_process/ProcResult.hpp"
-    #   include "process/sub_process/SubProcess.hpp"
     # /* IWYU pragma: end_exports */
     #endif /* ONLY_FORWARD_SYMBOL_DECLS_UNIQX_ */
     
@@ -84,7 +91,7 @@
 #if 0
     #define ONLY_FORWARD_SYMBOL_DECLS_UNIQX_
     #
-    #   include "uniqx.hpp"
+    #   include "uniqx/uniqx.hpp"
     #
     #undef ONLY_FORWARD_SYMBOL_DECLS_UNIQX_
 #endif

@@ -1,7 +1,7 @@
-#include <fcntl.h>
-#include <algorithm>
+#include <print>
 #include <string>
 #include <vector>
+#include <fcntl.h>
 #include <unistd.h>
 #include <algorithm>
 #include <sys/poll.h>
@@ -9,10 +9,10 @@
 #include <sys/types.h>
 
 #include "globals.hpp"
-#include "sub_process/UniqxPd.hpp"
-#include "sub_process/UniqxPipe.hpp"
-#include "sub_process/ProcResult.hpp"
-#include "sub_process/SubProcess.hpp"
+#include "process/ProcPd.hpp"
+#include "process/ProcPipe.hpp"
+#include "process/ProcResult.hpp"
+#include "process/SubProcess.hpp"
 
 namespace [[
         /* nullAttr_ */
@@ -20,65 +20,6 @@ namespace [[
 {
     
     using namespace system::process;
-    
-    auto system::process::operator |
-        ( SubProcess::opt_t opt_lhs_ , SubProcess::opt_t opt_rhs_ )
-    -> system::process::SubProcess::opt_t
-    {
-        using T = std::underlying_type_t<SubProcess::opt_t>;
-        return
-            (
-                static_cast<SubProcess::opt_t>
-                (
-                    static_cast<T> ( opt_lhs_ ) | static_cast<T> ( opt_rhs_ )
-                )
-            )
-        ;
-    }
-    
-    auto system::process::operator &
-        ( SubProcess::opt_t opt_lhs_ , SubProcess::opt_t opt_rhs_ )
-    -> system::process::SubProcess::opt_t
-    {
-        using T = std::underlying_type_t<SubProcess::opt_t>;
-        return
-            (
-                static_cast<SubProcess::opt_t>
-                (
-                    static_cast<T> ( opt_lhs_ ) & static_cast<T> ( opt_rhs_ )
-                )
-            )
-        ;
-    }
-    
-    auto system::process::operator |=
-        ( SubProcess::opt_t& opt_lhs_ , SubProcess::opt_t opt_rhs_ )
-    -> system::process::SubProcess::opt_t&
-    {
-        opt_lhs_ = opt_lhs_ | opt_rhs_;
-        return ( opt_lhs_ );
-    }
-    
-    auto system::process::operator &=
-        ( SubProcess::opt_t& opt_lhs_ , SubProcess::opt_t opt_rhs_ )
-    -> system::process::SubProcess::opt_t&
-    {
-        opt_lhs_ = opt_lhs_ & opt_rhs_;
-        return ( opt_lhs_ );
-    }
-    
-    
-    auto hasFlag
-        ( const SubProcess::opt_t opt_IO_ )
-    -> bool
-    {
-        using T = std::underlying_type_t<SubProcess::opt_t>;
-        return
-            (
-                static_cast<T> ( opt_IO_ ) != +0
-            )
-        ;
-    }
     
     CLASS_CTOR
         SubProcess::SubProcess
@@ -111,27 +52,42 @@ namespace [[
         /* Execution engine */
     ]] SubProcess::
         mt_Res_execute
-        ( const ProcOpt pOpt_IO_ ) const
+        ( const opt_t pOpt_IO_ ) const
     -> Result_t
     {
         
-        auto [[
-            /* (Output pipe descriptor) Rx , Tx */
-        ]] [ _outPipeDes_RX ,
-            _outPipeDes_TX ]
-            {
-                UniqxPipe::create ( )
-            }
-        ;
+        /*! (Input pipe descriptor) [Rx , Tx] !*/
+        /*! structed bindings to initialize stdin pipes !*/
+        auto [ _inPipeDes_RX , _inPipeDes_TX ] { ProcPipe::create ( ) };
         
-        auto [[
-            /* (Error Output pipe descriptor) Rx , Tx */
-        ]] [ _errPipeDes_RX ,
-            _errPipeDes_TX ]
-            {
-                UniqxPipe::create ( )
-            }
-        ;
+        /*! (Output pipe descriptor) [Rx , Tx] !*/
+        /*! structed bindings to initialize stdout pipes !*/
+        auto [ _outPipeDes_RX , _outPipeDes_TX ] { ProcPipe::create ( ) };
+        
+        /*! (Error Output pipe descriptor) [Rx , Tx] !*/
+        /*! structed bindings to initialize stderr pipes !*/
+        auto [ _errPipeDes_RX , _errPipeDes_TX ] { ProcPipe::create ( ) };
+        
+        if
+            ( not ( pOpt_IO_ & opt_t::stdin ) )
+        {
+            _inPipeDes_RX.close ( );
+            _inPipeDes_TX.close ( );
+        }
+        
+        if
+            ( not ( pOpt_IO_ & opt_t::stdout ) )
+        {
+            _outPipeDes_RX.close ( );
+            _outPipeDes_TX.close ( );
+        }
+        
+        if
+            ( not ( pOpt_IO_ & opt_t::stderr ) )
+        {
+            _errPipeDes_RX.close ( );
+            _errPipeDes_TX.close ( );
+        }
         
         ::pid_t _pid { ::fork ( ) };
         
@@ -149,12 +105,21 @@ namespace [[
             _outPipeDes_RX.close ( );
             _errPipeDes_RX.close ( );
             
-            /// Child process writes/transmits (TX) data to stdout
-            _outPipeDes_TX.redirectTo ( STDOUT_FILENO );
-            /// Child process writes/transmits (TX) data to stderr
-            _errPipeDes_TX.redirectTo ( STDERR_FILENO );
+            if
+                ( ( pOpt_IO_ & opt_t::stdout ) )
+            {
+                /// Child process writes/transmits (TX) data to stdout
+                _outPipeDes_TX >>= STDOUT_FILENO;
+            }
             
-            const auto k_zu_argvMax { this->mut_PM_vecStr_argv.size ( ) + 1ZU };
+            if
+                ( ( pOpt_IO_ & opt_t::stderr ) )
+            {
+                /// Child process writes/transmits (TX) data to stderr
+                _errPipeDes_TX >>= STDERR_FILENO;
+            }
+            
+            const auto k_zu_argvMax { this->mut_PM_vecStr_argv.size ( ) + 3ZU };
             
             std::vector<char* > _args { };
             _args.reserve ( k_zu_argvMax );
@@ -169,7 +134,7 @@ namespace [[
             
             ::execvp ( _args.front ( ) , _args.data ( ) );
             
-            ::_exit ( 127 );
+            ::_exit ( +127 );
             
         }
         
@@ -184,50 +149,18 @@ namespace [[
             _outPipeDes_RX.setNonBlock ( true );
             _errPipeDes_RX.setNonBlock ( true );
             
-            string_t _str_outResData; _str_outResData.reserve((+4096*+2));
-            string_t _str_errResData; _str_errResData.reserve((+4096*+2));
+            constexpr std::size_t K_zu_bufSize { /* +64 << +10 */ };
+            
+            string_t _str_outResData; _str_outResData.reserve ( K_zu_bufSize );
+            string_t _str_errResData; _str_errResData.reserve ( K_zu_bufSize );
             
             while
                 ( !_outPipeDes_RX.closed ( ) || !_errPipeDes_RX.closed ( ) )
             {
                 
-                [[ maybe_unused ]] bool b_active { };
+                _outPipeDes_RX >> _str_outResData;
                 
-                if
-                    ( hasFlag ( pOpt_IO_ & ProcOpt::stderr ) ) [[ likely ]]
-                {
-                    b_active |= _errPipeDes_RX.flushDataTo ( _str_errResData );
-                }
-                
-                else
-                {
-                    b_active |= _errPipeDes_RX.flushDataTo ( _str_errResData );
-                    _str_errResData.clear ( );
-                }
-                
-                if
-                    ( hasFlag ( pOpt_IO_ & ProcOpt::stdout ) ) [[ likely ]]
-                {
-                    b_active |= _outPipeDes_RX.flushDataTo ( _str_outResData );
-                }
-                
-                else
-                {
-                    b_active |= _outPipeDes_RX.flushDataTo ( _str_outResData );
-                    _str_outResData.clear ( );
-                }
-                
-                if
-                    (
-                        !b_active &&
-                        (
-                            !_outPipeDes_RX.closed ( ) ||
-                            !_errPipeDes_RX.closed ( )
-                        )
-                    )
-                {
-                    ::poll ( nullptr , +0 , +10 );
-                }
+                _errPipeDes_RX >> _str_errResData;
                 
             }
             
@@ -247,13 +180,13 @@ namespace [[
                     {
                         not _str_outResData.empty ( )
                         ? std::move ( _str_outResData )
-                        : ""
+                        : "???"
                     } ,
                     ._stderr
                     {
                         not _str_errResData.empty ( )
                         ? std::move ( _str_errResData )
-                        : ""
+                        : "???"
                     }
                 }
             ;
@@ -274,8 +207,8 @@ namespace [[
             (
                 SubProcess
                 (
-                    std::move(kr_str_cmdName_) ,
-                    std::move(kr_vecStr_argv_)
+                    kr_str_cmdName_ ,
+                    kr_vecStr_argv_
                 )
             )
         ;
@@ -332,6 +265,22 @@ namespace [[
         }
         
         std::println ( );
+        
+    }
+    
+    auto SubProcess::capture
+        ( const opt_t opt_ ) const
+    -> const SubProcess&
+    {
+        if
+            ( !opt_ )
+        {
+            return ( *this );
+        }
+        
+        this->PM_pOpt_opt |= opt_;
+        
+        return ( *this );
     }
     
     auto SubProcess::run
@@ -351,8 +300,7 @@ namespace [[
         
     }
     
-    auto SubProcess::
-        operator ( )
+    auto SubProcess::operator ( )
         ( const string_t& kr_str_cmdName_ ) const
     -> const SubProcess&
     {
@@ -371,8 +319,7 @@ namespace [[
         
     }
     
-    auto SubProcess::
-        operator [ ]
+    auto SubProcess::operator [ ]
         ( const string_t& kr_str_argv_ ) const
     -> const SubProcess&
     {
@@ -394,7 +341,6 @@ namespace [[
         {
             this->mut_PM_vecStr_argv.emplace_back ( kr_str_argv_ );
         }
-        
         
         return ( *this );
         

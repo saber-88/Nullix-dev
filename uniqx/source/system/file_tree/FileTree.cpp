@@ -15,7 +15,7 @@ namespace
 {
     
     auto
-        FileTree::home
+        system::FileTree::home
         ( void /* v_ */ )
     -> PathProxy
     {
@@ -27,7 +27,7 @@ namespace
     }
     
     auto
-        FileTree::config
+        system::FileTree::config
         ( void /* v_ */ )
     -> PathProxy
     {
@@ -39,7 +39,7 @@ namespace
     }
     
     auto
-        FileTree::cache
+        system::FileTree::cache
         ( void /* v_ */ )
     -> PathProxy
     {
@@ -51,7 +51,7 @@ namespace
     }
     
     auto
-        FileTree::local
+        system::FileTree::local
         ( void /* v_ */ )
     -> PathProxy
     {
@@ -63,7 +63,7 @@ namespace
     }
     
     auto
-        FileTree::source
+        system::FileTree::source
         (
             [[maybe_unused]]
             const std::optional<std::string_view> opt_ovr_
@@ -89,7 +89,7 @@ namespace
     }
     
     auto
-        FileTree::sync_all
+        system::FileTree::sync_all
         ( void /* v_ */ )
     -> void
     {
@@ -103,7 +103,7 @@ namespace
     
     // will implment later
     CLASS_CTOR
-        FileTree::FileTree
+        system::FileTree::FileTree
             ( void /* v_ */ )
         : PM_fsp_actv_userHome ( nullix::Host::mt_fsp_userHome ( ) )
         , kPM_fsp_fctr_userHome ( nullix::Host::mt_fsp_userHome ( ) )
@@ -114,7 +114,7 @@ namespace
     }
     
     CLASS_CTOR
-        FileTree::FileTree
+        system::FileTree::FileTree
             ( const std::fs::path& k_ref_fsp_userHome_ )
         : PM_fsp_actv_userHome ( k_ref_fsp_userHome_ )
         , kPM_fsp_fctr_userHome ( k_ref_fsp_userHome_ )

@@ -1,6 +1,6 @@
 #include <sys/wait.h>
 
-#include "sub_process/ProcResult.hpp"
+#include "process/ProcResult.hpp"
 
 namespace [[
     

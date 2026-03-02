@@ -1,22 +1,21 @@
 #include <array>
 #include <print>
+#include <cerrno>
 #include <cstdlib>
 
-#include "SubProcess.hpp"
-#include "sub_process/UniqxPd.hpp"
-#include "sub_process/UniqxPipe.hpp"
+#include "process/ProcPipe.hpp"
 
 namespace [[
         /* nullAttr_ */
     ]] uniqx
 {
     
-    using namespace system::process;
+    using namespace system;
     
-    auto SubProcess::
-        UniqxPipe::create
+    auto process::
+        ProcPipe::create
         ( void /* v_ */ )
-    -> UniqxPipe
+    -> ProcPipe
     {
         
         constexpr int K_i_pipeDes_RX { +0 };
@@ -34,20 +33,17 @@ namespace [[
         
         return
             {
-                .pipeDes_RX
+                
+                .pm_pipeDes_RX
                 {
-                    UniqxPd
-                    {
-                        _i_arr_pipeDes.at ( K_i_pipeDes_RX )
-                    }
+                    _i_arr_pipeDes.at ( K_i_pipeDes_RX )
                 } ,
-                .pipeDes_TX
+                
+                .pm_pipeDes_TX
                 {
-                    UniqxPd
-                    {
-                        _i_arr_pipeDes.at ( K_i_pipeDes_TX )
-                    }
+                    _i_arr_pipeDes.at ( K_i_pipeDes_TX )
                 }
+                
             }
         ;
         

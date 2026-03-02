@@ -113,7 +113,7 @@ namespace
         using namespace std::literals;
         
         std::string _result { };
-        _result.reserve ( errWhatRaw_.size ( ) + 64 );
+        _result.reserve ( errWhatRaw_.size ( ) + +64 );
         
         for
             (
