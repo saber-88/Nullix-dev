@@ -23,8 +23,8 @@
                 
                 DIAGNOSTICS_PUSH
                 DIAGNOSTICS_IGNORED ( "-Wpadded" )
-                private: int PM_i_pd { -1 };
-                private: size_t PM_zu_RX_Offset { };
+                private: int mutable PMm_i_pd { -1 };
+                private: size_t mutable PM_zu_RX_Offset { };
                 DIAGNOSTICS_POP
                 
                 private: enum class
@@ -43,76 +43,84 @@
                 
                 /// delete copy constructor
                 public: CLASS_CTOR ProcPd
-                    ( const ProcPd& /* ProcPd */ )
+                    ( ProcPd const& /* ProcPd */ )
                 = delete ( "Do not copy pipe descriptor!" );
                 
                 /// explicit constructor with initializer
                 public: explicit
                     CLASS_CTOR ProcPd
-                    ( const int /* k_i_pd_ */ )
+                    ( int const /* k_i_pd_ */ )
                 ;
                 
                 /// move constructor
                 public: CLASS_CTOR ProcPd
-                    ( ProcPd&& /* Ppd_otherPd_ */ ) noexcept ( true )
+                    ( ProcPd&& /* Ppd_otherPd_ */ )
+                    noexcept ( true )
                 ;
                 
                 /// set the owned pd data read to non blocking
                 public: auto setNonBlock
-                    ( const bool /* k_b_enabled_ */ ) noexcept ( true )
+                    ( bool const /* k_b_enabled_ */ ) const
+                    noexcept ( true )
                 -> void;
                 
                 public: auto pollState
-                    ( const int /* k_i_tmoutMS_ */ = { } ) noexcept ( true )
+                    ( int const /* k_i_tmoutMS_ */ = { } ) const
+                    noexcept ( true )
                 -> PollStatus;
                 
                 /// close the owned pd
                 public: auto close
-                    ( void /* v_ */ ) noexcept ( true )
+                    ( void /* v_ */ ) const
+                    noexcept ( true )
                 -> void;
                 
                 /// check if owned pd is closed
                 public: auto closed
-                    ( void /* v_ */ ) noexcept ( true )
+                    ( void /* v_ */ ) const
+                    noexcept ( true )
                 -> bool;
                 
                 /// delete owned pd copy operation
                 public: auto operator =
-                    ( const ProcPd& /* ProcPd */ )
+                    ( ProcPd const& /* ProcPd */ )
                 -> ProcPd&
                 = delete ( "Do not copy pipe descriptor!" );
                 
                 /// owned pd move operation
                 public: auto operator =
-                    ( ProcPd&& /* Ppd_otherPd_ */ ) noexcept ( true )
+                    ( ProcPd&& /* Ppd_otherPd_ */ ) const
+                    noexcept ( true )
                 -> ProcPd&;
                 
                 /// owned pd redirection operation
                 public: auto operator >>=
-                    ( const int /* i_targetPd_ */ )
+                    ( int const /* i_targetPd_ */ ) const
                     noexcept ( true )
                 -> void;
                 
                 /// owned pd TX data
                 public: auto operator >>
-                    ( std::string& /* r_str_resBufData_TX_ */ )
+                    ( std::string& /* r_str_resBufData_TX_ */ ) const
                     noexcept ( true )
                 -> bool;
                 
                 /// owned pd RX Data
                 public: auto operator <<
-                    ( const std::string& /* kr_str_resBufData_RX_ */ )
+                    ( std::string const& /* kr_str_resBufData_RX_ */ ) const
                     noexcept ( true )
                 -> bool;
                 
                 /// owned pd conversion operator int
                 public: operator int
-                    ( void /* v_ */ ) const noexcept ( true )
+                    ( void /* v_ */ ) const
+                    noexcept ( true )
                 ;
                 
                 /// owned pd destructor for clean up
                 public: CLASS_DTOR ~ProcPd
-                    ( void /* v_ */ ) noexcept ( true )
+                    ( void /* v_ */ )
+                    noexcept ( true )
                 ;
                 
             }

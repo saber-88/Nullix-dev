@@ -24,24 +24,22 @@ namespace [[
     CLASS_CTOR
         SubProcess::SubProcess
             (
-                const string_t& kr_str_cmdName_ ,
-                const vecStr_t& kr_vecStr_argv_
+                string_t const& kr_str_cmdName_ ,
+                vecStr_t const& kr_vecStr_argv_
             )
         : PM_str_command ( kr_str_cmdName_ )
         , mut_PM_vecStr_argv ( kr_vecStr_argv_ )
     {
         this->mut_PM_vecStr_argv.reserve
-            ( this->mut_PM_vecStr_argv.size ( ) +32ZU )
+            ( this->mut_PM_vecStr_argv.size ( ) + +32ZU )
         ;
         
-        this->mut_PM_vecStr_argv.emplace_back
-            ( kr_str_cmdName_ )
-        ;
+        this->mut_PM_vecStr_argv.emplace_back ( kr_str_cmdName_ );
         
         std::rotate
             (
                 this->mut_PM_vecStr_argv.rbegin ( ) ,
-                this->mut_PM_vecStr_argv.rbegin ( ) + 1ZU ,
+                this->mut_PM_vecStr_argv.rbegin ( ) + +1ZU ,
                 this->mut_PM_vecStr_argv.rend ( )
             )
         ;
@@ -52,13 +50,13 @@ namespace [[
         /* Execution engine */
     ]] SubProcess::
         mt_Res_execute
-        ( const opt_t pOpt_IO_ ) const
+        ( opt_t const pOpt_IO_ ) const
     -> Result_t
     {
         
         /*! (Input pipe descriptor) [Rx , Tx] !*/
         /*! structed bindings to initialize stdin pipes !*/
-        auto [ _inPipeDes_RX , _inPipeDes_TX ] { ProcPipe::create ( ) };
+         auto [ _inPipeDes_RX , _inPipeDes_TX ] { ProcPipe::create ( ) };
         
         /*! (Output pipe descriptor) [Rx , Tx] !*/
         /*! structed bindings to initialize stdout pipes !*/
@@ -99,7 +97,7 @@ namespace [[
             ( _pid == +0 )
         {
             
-            /* the chaild process transmits the data to us */
+            /* the child process transmits the data to us */
             
             /// close read/reciver (RX) unused pipes else it will hang the pipe
             _outPipeDes_RX.close ( );
@@ -119,15 +117,18 @@ namespace [[
                 _errPipeDes_TX >>= STDERR_FILENO;
             }
             
-            const auto k_zu_argvMax { this->mut_PM_vecStr_argv.size ( ) + 3ZU };
+            auto const
+                k_zu_argvMax
+                { this->mut_PM_vecStr_argv.size ( ) + +3ZU }
+            ;
             
-            std::vector<char* > _args { };
+            std::vector<char*> _args { };
             _args.reserve ( k_zu_argvMax );
             
             for
-                ( const auto& arg_ : this->mut_PM_vecStr_argv )
+                ( auto& arg_ : this->mut_PM_vecStr_argv )
             {
-                _args.emplace_back ( const_cast<char* > ( arg_.c_str ( ) ) );
+                _args.emplace_back ( arg_.data ( ) );
             }
             
             _args.emplace_back ( nullptr );
@@ -197,8 +198,8 @@ namespace [[
     
     auto SubProcess::create
         (
-            const string_t& kr_str_cmdName_ ,
-            const vecStr_t& kr_vecStr_argv_
+            string_t const& kr_str_cmdName_ ,
+            vecStr_t const& kr_vecStr_argv_
         )
     -> SubProcess
     {
@@ -270,7 +271,7 @@ namespace [[
     
     auto SubProcess::capture
         ( const opt_t opt_ ) const
-    -> const SubProcess&
+    -> SubProcess const&
     {
         if
             ( !opt_ )
@@ -301,8 +302,8 @@ namespace [[
     }
     
     auto SubProcess::operator ( )
-        ( const string_t& kr_str_cmdName_ ) const
-    -> const SubProcess&
+        ( string_t const& kr_str_cmdName_ ) const
+    -> SubProcess const&
     {
         
         if
@@ -321,12 +322,12 @@ namespace [[
     
     auto SubProcess::operator [ ]
         ( const string_t& kr_str_argv_ ) const
-    -> const SubProcess&
+    -> SubProcess const&
     {
         
         if
             (
-                const auto&
+                auto const&
                     kr_aut_itr
                     {
                         std::find

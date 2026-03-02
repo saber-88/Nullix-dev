@@ -25,20 +25,22 @@ namespace [[
     ]] process::
         ProcPd::ProcPd
             ( const int k_i_pd_ )
-        : PM_i_pd ( k_i_pd_ )
+        : PMm_i_pd ( k_i_pd_ )
     { }
     
     CLASS_CTOR [[
         /* nullAttr_ */
     ]] process::
         ProcPd::ProcPd
-            ( ProcPd&& Ppd_otherPd_ ) noexcept
-        : PM_i_pd ( std::exchange ( Ppd_otherPd_.PM_i_pd , -1 ) )
+            ( ProcPd&& Ppd_otherPd_ )
+            noexcept ( true )
+        : PMm_i_pd ( std::exchange ( Ppd_otherPd_.PMm_i_pd , -1 ) )
     { }
     
     auto process::
         ProcPd::operator =
-        ( ProcPd&& Ppd_otherPd_ ) noexcept
+        ( ProcPd&& Ppd_otherPd_ ) const
+        noexcept ( true )
     -> ProcPd&
     {
         
@@ -46,16 +48,17 @@ namespace [[
             ( this != &Ppd_otherPd_ )
         {
             this->close ( );
-            this->PM_i_pd = std::exchange ( Ppd_otherPd_.PM_i_pd , -1 );
+            this->PMm_i_pd = std::exchange ( Ppd_otherPd_.PMm_i_pd , -1 );
         }
         
-        return ( *this );
+        return ( const_cast<ProcPd&> ( *this ) );
         
     }
     
     auto process::
         ProcPd::operator >>=
-        ( const int i_targetPd_ ) noexcept ( true )
+        ( const int i_targetPd_ ) const
+        noexcept ( true )
     -> void
     {
         
@@ -63,8 +66,8 @@ namespace [[
         
         if
             (
-                this->PM_i_pd != i_targetPd_ &&
-                ::dup2 ( this->PM_i_pd , i_targetPd_ ) != -1
+                this->PMm_i_pd != i_targetPd_ &&
+                ::dup2 ( this->PMm_i_pd , i_targetPd_ ) != -1
             ) [[ likely ]]
         {
             // success. so we can safely close it
@@ -84,7 +87,8 @@ namespace [[
     
     auto process::
         ProcPd::setNonBlock
-        ( const bool k_b_enabled_ ) noexcept ( true )
+        ( const bool k_b_enabled_ ) const
+        noexcept ( true )
     -> void
     {
         
@@ -96,9 +100,9 @@ namespace [[
             
             ::fcntl
                 (
-                    this->PM_i_pd ,
+                    this->PMm_i_pd ,
                     F_SETFL ,
-                    ::fcntl ( this->PM_i_pd , F_GETFL , +0 ) | O_NONBLOCK
+                    ::fcntl ( this->PMm_i_pd , F_GETFL , +0 ) | O_NONBLOCK
                 )
             ;
             
@@ -107,7 +111,8 @@ namespace [[
     
     auto process::
         ProcPd::pollState
-        ( const int k_i_tmoutMS_ ) noexcept ( true )
+        ( const int k_i_tmoutMS_ ) const
+        noexcept ( true )
     -> PollStatus
     {
         
@@ -120,7 +125,7 @@ namespace [[
         pollfd
             _pfd_pd
             {
-                .fd = this->PM_i_pd ,
+                .fd = this->PMm_i_pd ,
                 .events = POLLIN ,
                 .revents = 0
             }
@@ -140,7 +145,8 @@ namespace [[
     
     auto process::
         ProcPd::operator >>
-        ( std::string& r_str_resBufData_TX_ ) noexcept ( true )
+        ( std::string& r_str_resBufData_TX_ ) const
+        noexcept ( true )
     -> bool
     {
         using enum PollStatus;
@@ -162,7 +168,7 @@ namespace [[
         
         // 64kb buffer
         constexpr size_t K_zu_pipeBufSize { +64 << +10 };
-        const size_t K_zu_bufOffset { r_str_resBufData_TX_.size ( ) };
+        size_t const K_zu_bufOffset { r_str_resBufData_TX_.size ( ) };
         
         r_str_resBufData_TX_.resize_and_overwrite
             (
@@ -179,12 +185,12 @@ namespace [[
                     
                     auto _buf { _spn_bufView.subspan ( K_zu_bufOffset ) };
                     
-                    const ssize_t
+                    ssize_t const
                         k_z_bytesRXd
                         {
                             ::read
                             (
-                                this->PM_i_pd ,
+                                this->PMm_i_pd ,
                                 _buf.data ( ) ,
                                 _buf.size ( )
                             )
@@ -210,7 +216,8 @@ namespace [[
     
     auto process::
         ProcPd::operator <<
-        ( const std::string& kr_str_resBufData_RX_ ) noexcept ( true )
+        ( std::string const& kr_str_resBufData_RX_ ) const
+        noexcept ( true )
     -> bool
     {
         
@@ -228,16 +235,16 @@ namespace [[
             
         }
         
-        std::span<const char> _spn_remBufView { kr_str_resBufData_RX_ };
+        std::span<char const> _spn_remBufView { kr_str_resBufData_RX_ };
         
         auto _remBufCnt { _spn_remBufView.subspan ( this->PM_zu_RX_Offset ) };
         
-        const ssize_t
+        ssize_t const
             k_z_bytesTXd
             {
                 ::write
                 (
-                    this->PM_i_pd ,
+                    this->PMm_i_pd ,
                     _remBufCnt.data ( ) ,
                     _remBufCnt.size ( )
                 )
@@ -269,17 +276,18 @@ namespace [[
     
     auto process::
         ProcPd::close
-        ( void /* v_ */ ) noexcept ( true )
+        ( void /* v_ */ ) const
+        noexcept ( true )
     -> void
     {
         
         if
-            ( this->PM_i_pd >= +0 )
+            ( this->PMm_i_pd >= +0 )
         {
             
-            ::close ( this->PM_i_pd );
+            ::close ( this->PMm_i_pd );
             
-            this->PM_i_pd = -1L;
+            this->PMm_i_pd = -1L;
             
         }
         
@@ -287,18 +295,20 @@ namespace [[
     
     auto process::
         ProcPd::closed
-        ( void /* v_ */ ) noexcept ( true )
+        ( void /* v_ */ ) const
+        noexcept ( true )
     -> bool
     {
-        return this->PM_i_pd < +0;
+        return this->PMm_i_pd < +0;
     }
     
     process::
         ProcPd::operator int
-        ( void /* v_ */) const noexcept ( true )
+        ( void /* v_ */) const
+        noexcept ( true )
     {
         
-        return ( this->PM_i_pd );
+        return ( this->PMm_i_pd );
         
     }
     
@@ -306,7 +316,8 @@ namespace [[
         /* nullAttr_ */
     ]] process::
         ProcPd::~ProcPd
-        ( void /* v_ */ ) noexcept ( true )
+        ( void /* v_ */ )
+        noexcept ( true )
     {
         
         this->close ( );
