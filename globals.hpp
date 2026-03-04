@@ -19,7 +19,7 @@
     #define STRUCT_DTOR Null_Dtor_
     
     #define LIB_ULIX_VERSION_ "v0.0.1"
-    #define LIB_UNIQX_VERSION_ "v0.1.1"
+    #define LIB_UNIQX_VERSION_ "v0.1.2"
     #define LIB_NULLIX_VERSION_ "v1.1.1"
     
     DIAGNOSTICS_PUSH /* silence gblx_detail_ attrs_ */

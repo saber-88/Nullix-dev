@@ -260,51 +260,6 @@ namespace [[
         
     }
     
-    // auto SubProcess::printArgs
-    //     ( void /* v_ */ ) const
-    // -> void
-    // {
-        
-    //     if
-    //         ( this->PMmkp_sbp_prevCmd )
-    //     {
-            
-    //         this->PMmkp_sbp_prevCmd->printArgs ( );
-            
-    //         std::println ( stderr , "\n::[DEBUG]: Piped '|' to:\n" );
-            
-    //     }
-        
-    //     std::print ( stderr , "::[DEBUG BEGIN]: command = " );
-        
-    //     std::println ( stderr , "{:?}" , this->PMm_str_command );
-        
-    //     if
-    //         ( PMm_vecStr_argv.size ( ) < 2ZU )
-    //     {
-    //         std::println ( "{:>4}::[DEBUG]: No arguments passed!" , "" );
-    //     }
-        
-    //     for
-    //         ( size_t idx { 1ZU }; idx < PMm_vecStr_argv.size ( ); ++idx )
-    //     {
-            
-    //         std::println
-    //             (
-    //                 stderr ,
-    //                 "{:>4}::[DEBUG]: argv[{}] = {:?}"
-    //                 , "" , idx - ( +1ZU ) , this->PMm_vecStr_argv [ idx ]
-    //             )
-    //         ;
-            
-    //     }
-        
-    //     std::print ( stderr , "::[DEBUG END]: command = " );
-        
-    //     std::println ( stderr , "{:?}" , this->PMm_str_command );
-        
-    // }
-    
     auto SubProcess::
         mt_v_printRecursive
         ( bool const is_first_caller ) const
