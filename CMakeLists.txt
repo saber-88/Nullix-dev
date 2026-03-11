@@ -55,10 +55,10 @@ target_compile_options ( nullib PUBLIC
 
 target_sources( nullib PRIVATE
     nullix/source/host/host.cpp
-    nullix/source/generator/generator.cpp
     errika/source/error/error.cpp
     uniqx/source/filesystem/Path.cpp
     uniqx/source/filesystem/FileTree.cpp
+    nullix/source/generator/generator.cpp
     uniqx/source/system/process/ProcPd.cpp
     uniqx/source/system/process/ProcPipe.cpp
     uniqx/source/system/process/SubProcess.cpp
