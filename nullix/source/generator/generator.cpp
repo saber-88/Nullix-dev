@@ -1,13 +1,12 @@
 #include "generator/generator.hpp"
-#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <print>
 #include <string>
+#include <string_view>
 #include <system_error>
-#include <toml++/impl/parse_result.hpp>
-#include <toml++/impl/parser.hpp>
-#include <toml++/impl/table.hpp>
+#include "errika/errika.hpp"
+#include "globals.hpp"
 #include <toml++/toml.hpp>
 #include <utility>
 #include <vector>
@@ -16,29 +15,37 @@ using namespace nullix;
 
 auto
     Generator::computeNextGeneration()
--> std::expected<int, std::string>
+-> std::expected<int, errika::Err_t_>
 {
-    const char* homeEnv = std::getenv("HOME");
-    if
-        (!homeEnv)
-    {
-        return std::unexpected("HOME environment variable not set");
-    }
-
-    std::string HOME = homeEnv;
-    std::string stateFile = HOME + "/.local/share/nullix/state.toml";
+    std::string HOME = std::string(this->userHomePath);
 
     if
-        (!std::filesystem::exists(stateFile))
+        (!std::filesystem::exists(this->stateFile))
     {
-        return std::unexpected("state.toml not found");
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "state.toml file not found" ,
+                std::src_loc()
+            }
+        );
     }
 
-    toml::parse_result result = toml::parse_file(stateFile);
+    toml::parse_result result = toml::parse_file(std::string(this->stateFile));
     if
         (!result)
     {
-        return std::unexpected(std::string(result.error().description()));
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                std::string(result.error().description()),
+                std::src_loc()
+            }
+        );
     }
     auto state = std::move(result).table();
     auto latest = state["latest_generation"].value<int>();
@@ -46,7 +53,15 @@ auto
     if
         (!latest)
     {
-        return std::unexpected("latest_generation missing or invalid");
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "latest_generation missing or invalid",
+                std::src_loc()
+            }
+        );
     }
 
     return *latest + 1;
@@ -56,17 +71,10 @@ auto
 
 auto
     Generator::getModules()
--> std::expected<std::vector<std::string>, std::string>
+-> std::expected<std::vector<std::string>, errika::Err_t_>
 {
 
-    const char* homeEnv = std::getenv("HOME");
-    if
-        (!homeEnv)
-    {
-        return std::unexpected("HOME environment variable not set");
-    }
-
-    std::string HOME = homeEnv;
+    std::string HOME = std::string(this->userHomePath);
     std::string nullixModuleFile = HOME + "/.config/nullix/modules.toml";
 
 
@@ -74,7 +82,15 @@ auto
     if
         (!result)
     {
-        return std::unexpected(std::string(result.error().description()));
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                std::string(result.error().description()),
+                std::src_loc()
+            }
+        );
     }
 
     auto config = std::move(result).table();
@@ -82,7 +98,15 @@ auto
     if
         (!modules)
     {
-        return std::unexpected(std::string{"No Modules Found."});
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "No Modules Found!",
+                std::src_loc()
+            }
+        );
     }
     std::vector<std::string> moduleList;
 
@@ -100,71 +124,29 @@ auto
 }
 
 auto
-    Generator::generate()
--> std::expected<bool, std::string>
+    Generator::copyConfigs(const std::filesystem::path &genDirPath)
+-> std::expected<bool, errika::Err_t_>
 {
-
-    // getting HOME
-    const char* homeEnv = std::getenv("HOME");
-    if
-        (!homeEnv)
-    {
-        return std::unexpected("HOME environment variable not set");
-    }
-
-    // getting next generation number
-    auto genNum = this->computeNextGeneration();
-    if
-        (!genNum.has_value())
-    {
-        return std::unexpected(genNum.error());
-    }
-    int nextGen = *genNum;
-
-    // setting up paths
-    std::string HOME = homeEnv;
-    std::string genNumStr = std::to_string(nextGen);
-    std::string genDirName = "gen" + genNumStr;
-
-    std::filesystem::path nullixDataHome = HOME + "/.local/share/nullix";
-    std::filesystem::path nullixUserHome = HOME + "/.config/nullix";
-    std::filesystem::path nullixGeneratedPath = nullixDataHome / "generated";
-    std::filesystem::path genDirPath = nullixGeneratedPath / genDirName;
-    std::filesystem::path nullixUserConfigPath = HOME + "/.config/nullix/config";
-
-    // getting Modules
-    auto modules = this->getModules();
+    std::error_code ec;
+    const auto& modules = this->getModules();
     if
         (!modules.has_value())
     {
-        return std::unexpected( modules.error());
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                std::string(modules.error().mt_str_errLog()),
+                std::src_loc()
+            }
+        );
     }
     std::vector<std::string> mods = *modules;
-
-
-    // creating directories
-    std::error_code ec;
-    std::filesystem::create_directories(genDirPath / "config", ec);
-
-
-    if
-        (ec)
-    {
-        return std::unexpected(ec.message());
-    }
-    ec.clear();
-
-    std::println
-        (
-            "Successfully created directory:{}",
-            std::string(genDirPath / "config")
-        )
-    ;
-
     for
         (auto& mod : mods)
     {
-        std::filesystem::path source = nullixUserConfigPath / mod;
+        std::filesystem::path source = this->nullixUserConfigPath / mod;
         std::filesystem::path dest = genDirPath / "config" / mod;
 
         if
@@ -190,15 +172,48 @@ auto
                     std::filesystem::copy_options::overwrite_existing,
                     ec
                 );
+            std::println
+                (
+                    "Successfully copied directory from {} to {}",
+                    std::string(source) ,
+                    std::string(dest)
+                )
+            ;
+            if
+                (ec)
+            {
+                return std::unexpected
+                (
+                    errika::Err_t_
+                    {
+                        errika::error::Err_t_::e_ErrType::Fatal,
+                        ec.message() ,
+                        std::src_loc()
+                    }
+                );
+            }
+            ec.clear();
         }
-        if
-            (ec)
-        {
-            return std::unexpected(ec.message());
+        else {
+            return std::unexpected
+            (
+                errika::Err_t_
+                {
+                    errika::error::Err_t_::e_ErrType::Fatal,
+                    "Source module directory is not found!",
+                    std::src_loc()
+                }
+            );
         }
-        ec.clear();
     }
+    return true;
+};
 
+auto
+    Generator::copyPackageList(const std::string &genDirName)
+-> std::expected<bool, errika::Err_t_>
+{
+    std::error_code ec;
     //getting packages
     std::filesystem::path srcPkgListPath =
     nullixUserHome/ ".packages" / "pkglist.txt";
@@ -238,16 +253,37 @@ auto
     else
     {
         std::println("{}", "Package list not found");
-        return std::unexpected("Package list not found");
-    }
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "Package list not found!" ,
+                std::src_loc()
+            }
+        );    }
 
     if
         (ec)
     {
-        return std::unexpected(ec.message());
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                ec.message(),
+                std::src_loc()
+            }
+        );
     }
     ec.clear();
-
+    std::println
+    (
+        "Successfully copied package list from {} to {}",
+        std::string(srcPkgListPath) ,
+        std::string(destPkgListPath)
+    )
+;
     if
         (
             (
@@ -277,25 +313,59 @@ auto
     else
     {
         std::println("{}", "Aur Package list not found");
-        return std::unexpected("Aur Package list not found");
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "AUR Package list not found!" ,
+                std::src_loc()
+            }
+        );
     }
 
     if
         (ec)
     {
-        return std::unexpected(ec.message());
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                ec.message() ,
+                std::src_loc()
+            }
+        );
     }
     ec.clear();
+    std::println
+        (
+            "Successfully copied package list from {} to {}",
+            std::string(srcAurPkgListPath) ,
+            std::string(destAurPkgListPath)
+        )
+    ;
+    return true;
+}
 
+auto
+    Generator::updateState(const int &nextGen)
+-> std::expected<bool, errika::Err_t_>
+{
     //updating state
-
-    std::string stateFile = HOME + "/.local/share/nullix/state.toml";
-
-    toml::parse_result result = toml::parse_file(stateFile);
+    toml::parse_result result = toml::parse_file(std::string(this->stateFile));
     if
         (!result)
     {
-        return std::unexpected(std::string(result.error().description()));
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                std::string(result.error().description()),
+                std::src_loc()
+            }
+        );
     }
     auto state = std::move(result).table();
     state.insert_or_assign("latest_generation" , nextGen);
@@ -304,16 +374,150 @@ auto
     if
         (!out)
     {
-        return std::unexpected("Failed to open state.toml for writing");
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "Failed to open state.toml file for writing!" ,
+                std::src_loc()
+            }
+        );
     }
     out << state;
     if
         (!out)
     {
-        return std::unexpected("Failed writing state.toml");
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                "Failed writing to state.toml" ,
+                std::src_loc()
+            }
+        );
+    }
+    return true;
+
+};
+
+auto
+    Generator::createDirectories(const std::filesystem::path &genDirPath)
+-> std::expected<bool, errika::Err_t_>
+{
+    // creating directories
+    std::error_code ec;
+    std::filesystem::create_directories(genDirPath / "config", ec);
+
+
+    if
+        (ec)
+    {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                ec.message(),
+                std::src_loc()
+            }
+        );
+    }
+    ec.clear();
+
+    std::println
+    (
+        "Successfully created directory:{}",
+        std::string(genDirPath / "config")
+    );
+    return true;
+}
+auto
+    Generator::generate()
+-> std::expected<bool, errika::Err_t_>
+{
+
+    // getting next generation number
+    auto genNum = this->computeNextGeneration();
+    if
+        (!genNum.has_value())
+    {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                genNum.error().mt_str_errLog(),
+                std::src_loc()
+            }
+        );
+    }
+    int nextGen = *genNum;
+
+    // setting up paths
+    std::string genNumStr = std::to_string(nextGen);
+    std::string genDirName = "gen" + genNumStr;
+
+    std::filesystem::path genDirPath = this->nullixGeneratedPath / genDirName;
+
+    // creating required directories in nullix data home
+    auto createDirectoriesRes = this->createDirectories(genDirPath);
+    if (!createDirectoriesRes.has_value()) {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                createDirectoriesRes.error().mt_str_errLog(),
+                std::src_loc()
+            }
+        );
     }
 
+    // copy modules
+    auto copyConfigRes = this->copyConfigs(genDirPath);
+    if (!copyConfigRes.has_value()) {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                copyConfigRes.error().mt_str_errLog(),
+                std::src_loc()
+            }
+        );
+    }
+
+    // copy the pacakge list
+    auto copyPackageListRes = this->copyPackageList(genDirName);
+    if (!copyPackageListRes.has_value()) {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                copyPackageListRes.error().mt_str_errLog(),
+                std::src_loc()
+            }
+        );
+    }
+
+    // updating the state
+    auto updateStateRes = this->updateState(nextGen);
+    if (!updateStateRes.has_value()) {
+        return std::unexpected
+        (
+            errika::Err_t_
+            {
+                errika::error::Err_t_::e_ErrType::Fatal,
+                updateStateRes.error().mt_str_errLog(),
+                std::src_loc()
+            }
+        );
+    }
     std::println("Successfully written to state file");
+    std::println("Successfully Generated {}",genDirName);
 
     return true;
 }
