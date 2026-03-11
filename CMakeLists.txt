@@ -19,32 +19,32 @@ target_compile_features ( nullib PUBLIC
 target_compile_options( nullib PRIVATE
     $<$<CXX_COMPILER_ID:GCC,GNU,Clang>:
         -ggdb
-        
+
         -Wall
         -Werror
         -Wextra
         -Wpedantic
-        
+
         -fno-exceptions
         -fdiagnostics-color
         -ferror-limit=99999999
     >
-    
+
     $<$<CXX_COMPILER_ID:Clang>:
         -ggdb
-        
+
         -Werror
         -Weverything
-        
+
         -Wno-c++98-compat
         -Wno-switch-default
         -Wno-c++98-compat-pedantic
         -Wno-covered-switch-default
-        
+
         -fdiagnostics-color
         -ferror-limit=99999999
     >
-    
+
 )
 
 target_compile_options ( nullib PUBLIC
@@ -55,6 +55,7 @@ target_compile_options ( nullib PUBLIC
 
 target_sources( nullib PRIVATE
     nullix/source/host/host.cpp
+    nullix/source/generator/generator.cpp
     errika/source/error/error.cpp
     uniqx/source/filesystem/Path.cpp
     uniqx/source/filesystem/FileTree.cpp
@@ -102,3 +103,11 @@ target_link_options ( nullib PRIVATE stdc++exp )
 target_link_libraries ( nullib PRIVATE stdc++exp )
 
 target_compile_definitions ( nullib PRIVATE TOML_EXCEPTIONS=0 )
+
+# i added this for testing stuff out
+# add_executable(nullib_test
+#     test/main.cpp
+# )
+# target_link_libraries(nullib_test
+#     PRIVATE nullix::nullib
+# )
