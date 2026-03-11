@@ -16,7 +16,20 @@ target_compile_features ( nullib PUBLIC
     cxx_std_26
 )
 
-target_compile_options( nullib PUBLIC
+target_compile_options( nullib PRIVATE
+    $<$<CXX_COMPILER_ID:GCC,GNU,Clang>:
+        -ggdb
+        
+        -Wall
+        -Werror
+        -Wextra
+        -Wpedantic
+        
+        -fno-exceptions
+        -fdiagnostics-color
+        -ferror-limit=99999999
+    >
+    
     $<$<CXX_COMPILER_ID:Clang>:
         -ggdb
         
@@ -28,13 +41,19 @@ target_compile_options( nullib PUBLIC
         -Wno-c++98-compat-pedantic
         -Wno-covered-switch-default
         
-        -fno-exceptions
         -fdiagnostics-color
         -ferror-limit=99999999
     >
+    
 )
 
-target_sources( nullib PUBLIC
+target_compile_options ( nullib PUBLIC
+    $<$<CXX_COMPILER_ID:GCC,GNU,Clang>:
+        -fno-exceptions
+    >
+)
+
+target_sources( nullib PRIVATE
     nullix/source/host/host.cpp
     errika/source/error/error.cpp
     uniqx/source/filesystem/Path.cpp
